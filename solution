@@ -1,7 +1,7 @@
 # %%
 # load data
 import pandas as pd
-
+import numpy as np
 data = pd.read_csv('train.csv')
 df = data.copy()
 df.sample(10)
@@ -17,24 +17,85 @@ print('Is there any NaN in the dataset: {}'.format(df.isnull().values.any()))
 # %%
 # convert categorical data into numerical data using one-hot encoding
 # For example, a feature like sex with categories ['male', 'female'] would be transformed into two new binary features, sex_male and sex_female, represented by 0 and 1.
-df = pd.get_dummies(df)
+df = pd.get_dummies(df, columns=['Sex', 'Embarked', 'Pclass'], drop_first=True)
 df.sample(10)
 # %% 
 # separate the features and labels
-df.corr(numeric_only=True)
 import seaborn as sns
-sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='YlGnBu')
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12,8))
+sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='YlGnBu', center=0)
+plt.title('Feature Correlation Matrix')
+plt.show()
+# Pairplot visualization
+sns.pairplot(df[['Age', 'SibSp', 'Parch', 'Fare', 'Survived']], hue='Survived', kind='scatter')
+plt.suptitle('Numerical Features by Survival Status', y=1.02)
+plt.show()
 # %%
 # train-test split
-sns.pairplot(df, kind='scatter', hue='Pclass')
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+X = df.drop('Survived', axis=1)
+y = df['Survived']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 # %%
 # build model
 # build three classification models
 # SVM, KNN, Random Forest
-
+models = {"SVM": SVC(kernel='rbf', random_state=42),"KNN": KNeighborsClassifier(n_neighbors=5),"Random Forest": RandomForestClassifier(n_estimators=100, random_state=42)}
+results = {}
 # %%
 # predict and evaluate
+for name, model in models.items():
+    # Train model
+    model.fit(X_train, y_train)
+    
+    # Make predictions
+    y_pred = model.predict(X_test)
+    
+    # Evaluate performance
+    accuracy = accuracy_score(y_test, y_pred)
+    report = classification_report(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+    
+    # Store results
+    results[name] = {
+        'accuracy': accuracy,
+        'report': report,
+        'confusion_matrix': cm
+    }
+    # Print results
+    print(f"\n{name} Results:")
+    print(f"Accuracy: {accuracy:.2f}")
+    print("Classification Report:")
+    print(report)
+    
+    # Plot confusion matrix
+    plt.figure()
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.title(f'{name} Confusion Matrix')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.show()
+# %%
+# Compare model performance
+print("\nModel Comparison:")
+for name, result in results.items():
+    print(f"{name}: Accuracy = {result['accuracy']:.2f}")
 
 # %%
+# Feature importance for Random Forest
+rf = models['Random Forest']
+feature_imp = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': rf.feature_importances_
+}).sort_values('Importance', ascending=False)
 
-
+plt.figure(figsize=(10,6))
+sns.barplot(x='Importance', y='Feature', data=feature_imp)
+plt.title('Random Forest Feature Importance')
+plt.show()
+# %%
