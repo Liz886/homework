@@ -7,6 +7,22 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
+
+# %%
+# set random seed for reproducibility
+import random  
+import os
+def set_all_seeds(seed=1):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+set_all_seeds(1)
 # %%
 # load data
 df = pd.read_csv('data//household_power_consumption.txt', sep = ";")
@@ -86,7 +102,7 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 # %%
 # build a LSTM model
 class LSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size=64, output_size=1):
+    def __init__(self, input_size, hidden_size=128, output_size=1):
         super(LSTMModel, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
